@@ -1,9 +1,9 @@
 package utils
 
 import (
+	"github.com/bwmarrin/discordgo"
 	"os"
 	"strings"
-	"github.com/bwmarrin/discordgo"
 )
 
 func MessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -30,6 +30,9 @@ func MessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		} else {
 			msg = "Start Minecraft Server!"
 			Systemctl("start")
+			s.ChannelEdit(m.ChannelID, &discordgo.ChannelEdit{
+				Name: "minecraft-on",
+			})
 		}
 		s.ChannelMessageSend(m.ChannelID, msg)
 	case "stop":
@@ -37,6 +40,9 @@ func MessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if IsServiceRunning(servName) {
 			msg = "Stop Minecraft Server!"
 			Systemctl("stop")
+			s.ChannelEdit(m.ChannelID, &discordgo.ChannelEdit{
+				Name: "minecraft-off",
+			})
 		} else {
 			msg = "Minecraft Server is Inactive!"
 		}
