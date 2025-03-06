@@ -1,10 +1,15 @@
 package utils
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/bwmarrin/discordgo"
 	"os"
 	"strings"
 )
+
+var cancelFunc context.CancelFunc
 
 func MessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
@@ -28,18 +33,34 @@ func MessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if IsServiceRunning(servName) {
 			msg = "Minecraft Server is Active!"
 		} else {
-			msg = "Start Minecraft Server!"
+			msg = "**Starting Minecraft Server!**"
 			Systemctl("start")
+
+			if cancelFunc != nil {
+				fmt.Println("Log already running")
+				return
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			cancelFunc = cancel
+			go LogListen(ctx, s, m)
 			s.ChannelEdit(m.ChannelID, &discordgo.ChannelEdit{
 				Name: "minecraft-on",
 			})
 		}
+
 		s.ChannelMessageSend(m.ChannelID, msg)
 	case "stop":
 		var msg string
 		if IsServiceRunning(servName) {
-			msg = "Stop Minecraft Server!"
+			msg = "**Stoping Minecraft Server!**"
 			Systemctl("stop")
+			if cancelFunc != nil {
+				cancelFunc()
+				cancelFunc = nil
+				fmt.Println("Log stopped")
+			} else {
+				fmt.Println("Log is not running")
+			}
 			s.ChannelEdit(m.ChannelID, &discordgo.ChannelEdit{
 				Name: "minecraft-off",
 			})
