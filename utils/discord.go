@@ -12,7 +12,9 @@ import (
 var cancelFunc context.CancelFunc
 
 func MessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.ID == s.State.User.ID {
+    chId := os.Getenv("CHANNEL_ID")
+    fmt.Printf("HC: %v - %v", chId, m.ChannelID)
+	if m.Author.ID == s.State.User.ID || chId != m.ChannelID {
 		return
 	}
 	prefix := "!"
@@ -47,7 +49,6 @@ func MessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 				Name: "minecraft-on",
 			})
 		}
-
 		s.ChannelMessageSend(m.ChannelID, msg)
 	case "stop":
 		var msg string
