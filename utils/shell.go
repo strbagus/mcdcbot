@@ -52,7 +52,7 @@ func LogListen(ctx context.Context, s *discordgo.Session, m *discordgo.MessageCr
 		default:
 			line := scanner.Text()
 			fmt.Println("server: ", line)
-			if strings.Contains(line, "#msg") || strings.Contains(line, "joined the game") || strings.Contains(line, "left the game") {
+			if strings.Contains(line, "#msg") || strings.Contains(line, "joined the game") || strings.Contains(line, "left the game") || strings.Contains(line, "Done preparing level") {
 				msg := strings.Split(line, ":")
 				tmp := msg[len(msg)-1]
 				var res string
@@ -62,13 +62,15 @@ func LogListen(ctx context.Context, s *discordgo.Session, m *discordgo.MessageCr
 				} else if strings.Contains(line, "left the game") {
 					name := strings.TrimSuffix(tmp, " left the game")
 					res = fmt.Sprintf("%s: **left the game**", name)
-				} else {
+				} else if strings.Contains(line, "#msg") {
 					start := strings.Index(tmp, "<") + 1
 					end := strings.Index(tmp, ">")
 					username := tmp[start:end]
 					message := strings.TrimPrefix(tmp[end+2:], "#msg ")
 					res = fmt.Sprintf("%s: *%s*", username, message)
-				}
+				} else {
+                    res = "**Minecraft Server is Running!**"
+                }
 				s.ChannelMessageSend(m.ChannelID, res)
 			}
 		}

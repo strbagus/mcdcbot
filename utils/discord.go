@@ -13,7 +13,6 @@ var cancelFunc context.CancelFunc
 
 func MessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
     chId := os.Getenv("CHANNEL_ID")
-    fmt.Printf("HC: %v - %v", chId, m.ChannelID)
 	if m.Author.ID == s.State.User.ID || chId != m.ChannelID {
 		return
 	}
@@ -33,9 +32,9 @@ func MessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	case "start":
 		var msg string
 		if IsServiceRunning(servName) {
-			msg = "Minecraft Server is Active!"
+			msg = "Minecraft Server is already Running!"
 		} else {
-			msg = "**Starting Minecraft Server!**"
+			msg = "**Starting Minecraft Server...**"
 			Systemctl("start")
 
 			if cancelFunc != nil {
@@ -53,7 +52,7 @@ func MessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	case "stop":
 		var msg string
 		if IsServiceRunning(servName) {
-			msg = "**Stoping Minecraft Server!**"
+			msg = "**Minecraft Server is Stopped!**"
 			Systemctl("stop")
 			if cancelFunc != nil {
 				cancelFunc()
@@ -66,7 +65,7 @@ func MessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 				Name: "minecraft-off",
 			})
 		} else {
-			msg = "Minecraft Server is Inactive!"
+			msg = "Minecraft Server is not Runnning!"
 		}
 		s.ChannelMessageSend(m.ChannelID, msg)
 	default:
