@@ -73,9 +73,6 @@ var (
 		},
 	}
 )
-func sendMessage(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	s.ChannelMessageSend(i.ChannelID, "hello")
-}
 
 func init() {
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
