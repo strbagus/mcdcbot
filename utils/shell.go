@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	// "regexp"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -28,7 +29,7 @@ func IsServiceRunning(serviceName string) bool {
 	return status == "active"
 }
 
-func LogListen(ctx context.Context, s *discordgo.Session, m *discordgo.MessageCreate) {
+func LogListen(ctx context.Context, s *discordgo.Session, m *discordgo.InteractionCreate) {
 	servName := os.Getenv("SERVICE_NAME")
 	cmd := exec.CommandContext(ctx, "journalctl", "-u", servName, "-f")
 
@@ -52,7 +53,7 @@ func LogListen(ctx context.Context, s *discordgo.Session, m *discordgo.MessageCr
 		default:
 			line := scanner.Text()
 			fmt.Println("server: ", line)
-			if strings.Contains(line, "#msg") || strings.Contains(line, "joined the game") || strings.Contains(line, "left the game") || strings.Contains(line, "Done preparing level") {
+			if strings.Contains(line, "#msg") || strings.Contains(line, "joined the game") || strings.Contains(line, "left the game") || strings.Contains(line, "Done preparing level") || strings.Contains(line, "UUID of player") || strings.Contains(line, "You are not whitelisted on this server!") {
 				msg := strings.Split(line, ":")
 				tmp := msg[len(msg)-1]
 				var res string
@@ -68,9 +69,19 @@ func LogListen(ctx context.Context, s *discordgo.Session, m *discordgo.MessageCr
 					username := tmp[start:end]
 					message := strings.TrimPrefix(tmp[end+2:], "#msg ")
 					res = fmt.Sprintf("%s: *%s*", username, message)
+				/* } else if strings.Contains(line, "UUID of player") {
+					re := regexp.MustCompile(`UUID of player (.+?) is ([0-9a-fA-F-]+)`)
+					matches := re.FindStringSubmatch(line)
+					if len(matches) == 3 {
+						name := matches[1]
+						uuid := matches[2]
+            res = fmt.Sprintf("`{\"uuid\": \"%s\", \"name\": \"%s\"}`", uuid, name)
+					}
+				} else if strings.Contains(line, "You are not whitelisted on this server!") {
+          res = "*User tersebut belum ada di whitelist*" */
 				} else {
-                    res = "**Minecraft Server is Running!**"
-                }
+					res = "**Minecraft Server is Running!**"
+				}
 				s.ChannelMessageSend(m.ChannelID, res)
 			}
 		}

@@ -6,26 +6,12 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"os"
-	"strings"
 )
 
 var cancelFunc context.CancelFunc
 
-func MessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-    chId := os.Getenv("CHANNEL_ID")
-	if m.Author.ID == s.State.User.ID || chId != m.ChannelID {
-		return
-	}
-	prefix := "!"
-	if !strings.HasPrefix(m.Content, prefix) {
-		return
-	}
-	args := strings.Fields(m.Content[len(prefix):])
-	if len(args) == 0 {
-		return
-	}
+func MessageHandler(command string, s *discordgo.Session, m *discordgo.InteractionCreate) {
 
-	command := args[0]
 	servName := os.Getenv("SERVICE_NAME")
 
 	switch command {
@@ -34,7 +20,6 @@ func MessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if IsServiceRunning(servName) {
 			msg = "Minecraft Server is already Running!"
 		} else {
-			msg = "**Starting Minecraft Server...**"
 			Systemctl("start")
 
 			if cancelFunc != nil {
