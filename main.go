@@ -6,26 +6,29 @@ import (
 	"minedc/utils"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 )
+
 var (
 	GuildID        *string
 	BotToken       *string
 	RemoveCommands *bool
-	s *discordgo.Session
+	s              *discordgo.Session
 )
-func init() { 
+
+func init() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file: ", err)
 	}
 }
 
-func init() { 
-	GuildID        = flag.String("guild", os.Getenv("GUILD_ID"), "Test guild ID. If not passed - bot registers commands globally")
-	BotToken       = flag.String("token", os.Getenv("BOT_TOKEN"), "Bot access token")
+func init() {
+	GuildID = flag.String("guild", os.Getenv("GUILD_ID"), "Test guild ID. If not passed - bot registers commands globally")
+	BotToken = flag.String("token", os.Getenv("BOT_TOKEN"), "Bot access token")
 	RemoveCommands = flag.Bool("rmcmd", true, "Remove all commands after shutdowning or not")
 	flag.Parse()
 
@@ -66,7 +69,7 @@ var (
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "**Stopping Minecrfat server...**",
+					Content: "**Stopping Minecraft server...**",
 				},
 			})
 			utils.MessageHandler("stop", s, i)
@@ -104,19 +107,39 @@ func main() {
 	defer s.Close()
 
 	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	log.Println("Press Ctrl+C to exit")
 	<-stop
 
 	if *RemoveCommands {
 		log.Println("Removing commands...")
 
-		for _, v := range registeredCommands {
-			err := s.ApplicationCommandDelete(s.State.User.ID, *GuildID, v.ID)
+		commandsGlo, err := s.ApplicationCommands(s.State.User.ID, "")
+		if err != nil {
+			log.Fatalf("Cannot fetch guild commands: %v", err)
+		}
+		commandsGui, err := s.ApplicationCommands(s.State.User.ID, *GuildID)
+		if err != nil {
+			log.Fatalf("Cannot fetch guild commands: %v", err)
+		}
+		log.Printf("CMD: %v - %v", commandsGlo, commandsGui)
+		for _, cmd := range commandsGlo {
+			err := s.ApplicationCommandDelete(s.State.User.ID, "", cmd.ID)
 			if err != nil {
-				log.Panicf("Cannot delete '%v' command: %v", v.Name, err)
+				log.Printf("Cannot delete global command %s: %v", cmd.Name, err)
+			} else {
+				log.Printf("Deleted global command: %s", cmd.Name)
 			}
 		}
+		for _, cmd := range commandsGui {
+			err := s.ApplicationCommandDelete(s.State.User.ID, *GuildID, cmd.ID)
+			if err != nil {
+				log.Printf("Cannot delete guild command %s: %v", cmd.Name, err)
+			} else {
+				log.Printf("Deleted guild command: %s", cmd.Name)
+			}
+		}
+
 	}
 
 	log.Println("Gracefully shutting down.")

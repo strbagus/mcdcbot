@@ -3,42 +3,44 @@ package utils
 import (
 	"context"
 	"fmt"
+	"log"
+	"os/exec"
+
+	"os"
 
 	"github.com/bwmarrin/discordgo"
-	"os"
 )
 
 var cancelFunc context.CancelFunc
 
 func MessageHandler(command string, s *discordgo.Session, m *discordgo.InteractionCreate) {
+	log.Printf("Handle %v.", command)
 
 	servName := os.Getenv("SERVICE_NAME")
 
 	switch command {
 	case "start":
-		var msg string
 		if IsServiceRunning(servName) {
-			msg = "Minecraft Server is already Running!"
+			msg := "Minecraft Server is already Running!"
+			s.ChannelMessageSend(m.ChannelID, msg)
+			log.Println(msg)
 		} else {
-			Systemctl("start")
-
+			startServer()
 			if cancelFunc != nil {
 				fmt.Println("Log already running")
 				return
 			}
 			ctx, cancel := context.WithCancel(context.Background())
 			cancelFunc = cancel
-			go LogListen(ctx, s, m)
-			s.ChannelEdit(m.ChannelID, &discordgo.ChannelEdit{
-				Name: "minecraft-on",
-			})
+			go LogListen(ctx, s, m.ChannelID)
 		}
-		s.ChannelMessageSend(m.ChannelID, msg)
 	case "stop":
 		var msg string
 		if IsServiceRunning(servName) {
 			msg = "**Minecraft Server is Stopped!**"
-			Systemctl("stop")
+			cmd := exec.Command("sudo", "systemctl", "stop", servName)
+			cmd.Run()
+			log.Println("Server Service is stopped.")
 			if cancelFunc != nil {
 				cancelFunc()
 				cancelFunc = nil
@@ -46,14 +48,23 @@ func MessageHandler(command string, s *discordgo.Session, m *discordgo.Interacti
 			} else {
 				fmt.Println("Log is not running")
 			}
-			s.ChannelEdit(m.ChannelID, &discordgo.ChannelEdit{
-				Name: "minecraft-off",
-			})
 		} else {
 			msg = "Minecraft Server is not Runnning!"
 		}
 		s.ChannelMessageSend(m.ChannelID, msg)
+		log.Println("Message: ", msg)
+		s.ChannelEdit(m.ChannelID, &discordgo.ChannelEdit{
+			Name: "minecraft-off",
+		})
+		log.Println("Channel name updated.")
 	default:
 		s.ChannelMessageSend(m.ChannelID, "Unknown command")
 	}
+}
+
+func startServer() {
+	servName := os.Getenv("SERVICE_NAME")
+	cmd := exec.Command("sudo", "systemctl", "start", servName)
+	cmd.Run()
+	log.Println("Starting Server Service.")
 }

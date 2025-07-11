@@ -4,15 +4,17 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
+
 	// "regexp"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
 
-func Systemctl(arg string) {
+func Systemctl(arg string, s *discordgo.Session, chName string) {
 	servName := os.Getenv("SERVICE_NAME")
 	cmd := exec.Command("sudo", "systemctl", arg, servName)
 	cmd.Run()
@@ -29,7 +31,7 @@ func IsServiceRunning(serviceName string) bool {
 	return status == "active"
 }
 
-func LogListen(ctx context.Context, s *discordgo.Session, m *discordgo.InteractionCreate) {
+func LogListen(ctx context.Context, s *discordgo.Session, channelID string) {
 	servName := os.Getenv("SERVICE_NAME")
 	cmd := exec.CommandContext(ctx, "journalctl", "-u", servName, "-f")
 
@@ -43,7 +45,7 @@ func LogListen(ctx context.Context, s *discordgo.Session, m *discordgo.Interacti
 		fmt.Println("Error starting command:", err)
 		return
 	}
-
+	log.Println("Listening Minecraft Server Log..")
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		select {
@@ -52,8 +54,9 @@ func LogListen(ctx context.Context, s *discordgo.Session, m *discordgo.Interacti
 			return
 		default:
 			line := scanner.Text()
-			fmt.Println("server: ", line)
+			// fmt.Println("server: ", line)
 			if strings.Contains(line, "#msg") || strings.Contains(line, "joined the game") || strings.Contains(line, "left the game") || strings.Contains(line, "Done preparing level") || strings.Contains(line, "UUID of player") || strings.Contains(line, "You are not whitelisted on this server!") {
+			fmt.Println("server: ", line)
 				msg := strings.Split(line, ":")
 				tmp := msg[len(msg)-1]
 				var res string
@@ -79,10 +82,13 @@ func LogListen(ctx context.Context, s *discordgo.Session, m *discordgo.Interacti
 					}
 				} else if strings.Contains(line, "You are not whitelisted on this server!") {
           res = "*User tersebut belum ada di whitelist*" */
-				} else {
+				} else if strings.Contains(line, "Done preparing level") {
 					res = "**Minecraft Server is Running!**"
+					s.ChannelEdit(channelID, &discordgo.ChannelEdit{
+						Name: "minecraft-on",
+					})
 				}
-				s.ChannelMessageSend(m.ChannelID, res)
+				s.ChannelMessageSend(channelID, res)
 			}
 		}
 	}
